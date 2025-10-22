@@ -2,7 +2,7 @@ struct Game {
 	bool close_requested;
 	u32 frames_since_init;
 
-	// Window::ButtonHandle button;
+	Windowing::ButtonHandle quit_button;
 };
 
 Game* game_init(Windowing::Context* window, Arena* arena) 
@@ -12,15 +12,13 @@ Game* game_init(Windowing::Context* window, Arena* arena)
 	game->close_requested = false;
 	game->frames_since_init = 0;
 
-	// game->button = Windowing::register_key(window, Windowing::Keycode::W);
+	game->quit_button = Windowing::register_key(window, Windowing::Keycode::Escape);
 
 	return game;
 }
 
 void game_update(Game* game, Windowing::Context* window, Render::State* render_state)
 {
-	if(Windowing::button_down(window, game->button)) { }
-
 	game->close_requested = Windowing::button_down(window, game->quit_button);
 	game->frames_since_init++;
 }
