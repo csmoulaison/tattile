@@ -1,3 +1,6 @@
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #define CSM_BASE_IMPLEMENTATION
 #include "base/base.h"
 
@@ -18,6 +21,11 @@ i32 main(i32 argc, char** argv)
 
 	Game* game;
 	game = game_init(window, &program_arena);
+
+	FT_Library ft;
+	if (FT_Init_FreeType(&ft)) {
+		panic();
+	}
 
 	Render::State* previous_render_state = (Render::State*)arena_alloc(&program_arena, sizeof(Render::State));
 	Render::State* current_render_state = (Render::State*)arena_alloc(&program_arena, sizeof(Render::State));
