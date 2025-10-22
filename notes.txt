@@ -1,0 +1,12 @@
+Maybe "tat" or "tt" or switch back to "jf" for "jeff"?
+
+Every character types remains either brighter or maybe yellow for a time as it 
+fades to the final color.
+
+Any frame in which syntax highlighting has been added where it wasn't there 
+before, the characters flash.
+
+The right side of the program has utilities, god damn it.
+
+Non-monospace unless there's a reason. Filenames are always monospace for 
+consistency.
