@@ -2,20 +2,19 @@
 
 #include "GL/gl3w.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_BMP
-#include "stb/stb_image.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #define TEXT_MAX_CHARS 4096
 
-typedef struct
-{
-	i32 index;
-	f32 x;
-	f32 y;
-	f32 size;
-	f32 color;
-} TextChar;
+#define MAX_FONT_CHARACTERS 128
+
+struct FontCharacter {
+	u32 texture_id;
+	u32 size[2];
+	i32 bearing[2];
+	u32 advance;
+};
 
 typedef struct
 {
@@ -31,6 +30,8 @@ typedef struct
 } TextUbo;
 
 typedef struct {
+	FontCharacter font_characters[MAX_FONT_CHARACTERS];
+
 	u32 box_program;
 	u32 text_program;
 
@@ -149,30 +150,58 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
 
-	/* Font atlas texture
-	glGenTextures(1, &gl->font_texture);
-	glBindTexture(GL_TEXTURE_2D, gl->font_texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// Text rendering
+	 
+	// Font texture loading
+	// TODO: Move offline
+	FT_Library ft;
+	if (FT_Init_FreeType(&ft)) { panic(); }
 
-	i32 w, h, channels;
-	unsigned char* texture_data = stbi_load("fonts/plex_mono.bmp", &w, &h, &channels, 3);
-	if(texture_data == nullptr) {
-		panic();
+	FT_Face face;
+	if(FT_New_Face(ft, "fonts/BerkeleyMono-Regular.otf", 0, &face)) { panic(); }
+	FT_Set_Pixel_Sizes(face, 0, 48);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	for(unsigned char c = 0; c < MAX_FONT_CHARACTERS; c++) {
+		if(FT_Load_Char(face, c, FT_LOAD_RENDER)) { panic(); }
+
+		u32 tex;
+		glGenTextures(1, &tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glTexImage2D(
+			GL_TEXTURE_2D, 
+			0, 
+			GL_RED, 
+			face->glyph->bitmap.width,
+			face->glyph->bitmap.rows,
+			0,
+			GL_RED,
+			GL_UNSIGNED_BYTE,
+			face->glyph->bitmap.buffer
+		);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		FontCharacter font_character = {
+			tex,
+			{ face->glyph->bitmap.width, face->glyph->bitmap.rows },
+			{ face->glyph->bitmap_left, face->glyph->bitmap_top },
+			(u32)face->glyph->advance.x
+		};
+		gl->font_characters[c] = font_character;
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, texture_data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(texture_data);
+
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
 
 	// Text SSBO
-	glGenBuffers(1, &gl->text_buffer_ssbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(TextChar[TEXT_MAX_CHARS]), nullptr, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, gl->text_buffer_ssbo);
-	*/
-
+	//glGenBuffers(1, &gl->text_buffer_ssbo);
+	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
+	//glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(TextChar[TEXT_MAX_CHARS]), nullptr, GL_DYNAMIC_DRAW);
+	//glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, gl->text_buffer_ssbo);
+	
 	// UBOs
 	gl->box_ubo = gl_create_ubo(sizeof(BoxUbo), nullptr);
 	//gl->text_ubo = gl_create_ubo(sizeof(TextUbo), nullptr);

@@ -1,18 +1,12 @@
 #version 430 core
-out vec4 FragColor;
+in vec2 TexCoords;
+out vec4 color;
 
-in float f_color;
-in vec2 f_uv;
-
-uniform sampler2D in_sampler;
+uniform Sampler2D text;
+uniform vec3 textColor;
 
 void main()
 {	
-	vec4 color = texture(in_sampler, f_uv);
-	float alpha = length(color.xyz);
-
-	// uncomment for visible background
-	// alpha = length(color.xyz) / 2.0f + 0.5f;
-
-	FragColor = vec4(vec3(0.25f), alpha * f_color);
+	vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
+	color = vec4(text_color, 1.0) * sampled;
 }
