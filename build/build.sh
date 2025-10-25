@@ -1,6 +1,6 @@
 mkdir ../bin
-cp -r fonts ../bin/fonts
-cp -r ../src/shaders ../bin/shaders
+cp -r fonts ../bin/
+cp -r ../src/shaders ../bin/
 
 g++ -g -o ../bin/tattile\
 	../src/game/main.cpp ../src/window/xlib/xlib_window.cpp ../src/time/unix/unix_time.cpp ../src/renderer/opengl/opengl.cpp \
