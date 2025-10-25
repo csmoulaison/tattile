@@ -128,7 +128,7 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	gl->quad_program = gl_create_program("shaders/quad.vert", "shaders/quad.frag");
 	gl->text_program = gl_create_program("shaders/text.vert", "shaders/text.frag");
 
-	// Vertex arrays/buffers
+	// Quad vertex array/buffer
 	f32 quad_vertices[] = {
 		 1.0f,  1.0f,
 		 1.0f, -1.0f,
@@ -147,7 +147,7 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), 0);
 
 	// Text rendering
 	 
@@ -195,14 +195,30 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	FT_Done_Face(face);
 	FT_Done_FreeType(ft);
 
+	// Text vertex array/buffer
+	glGenVertexArrays(1, &gl->text_vao);
+	glBindVertexArray(gl->text_vao);
+
+	u32 text_vbo;
+	glGenBuffers(1, &text_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, text_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 6 * 4, nullptr, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), 0);
+
 	// UBOs
 	gl->quad_ubo = gl_create_ubo(sizeof(BoxUbo), nullptr);
 
 	glViewport(0, 0, window->window_width, window->window_height);
 
+	// Unbind stuff
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
 	return renderer;
 }
 
+// NOW: Render line of text.
 void platform_render_update(Render::Context* renderer, Render::State* render_state, Windowing::Context* window, Arena* arena)
 {
 	GlBackend* gl = (GlBackend*)renderer->backend;
