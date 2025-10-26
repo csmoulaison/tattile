@@ -38,6 +38,7 @@ typedef struct {
 
 	u32 text_program;
 	u32 text_vao;
+	u32 text_vbo;
 	
 	u32 text_buffer_ssbo;
 	u32 font_texture;
@@ -110,6 +111,27 @@ u32 gl_create_ubo(u64 size, void* data)
 	return ubo;
 }
 
+void mat_ortho(float left, float right, float bottom, float top, float near_z, float far_z, float dst[16])
+{
+	float rl, tb, fn;
+
+	for(u8 i = 0; i < 16; i++) {
+		dst[i] = 0.0f;
+	}
+
+	rl =  1.0f / (right - left);
+	tb =  1.0f / (top   - bottom);
+	fn = -1.0f / (far_z - near_z);
+
+	dst[0] = 2.0f * rl;
+	dst[5] = 2.0f * tb;
+	dst[10] =-fn;
+	dst[12] =-(right + left)   * rl;
+	dst[13] =-(top   + bottom) * tb;
+	dst[14] = near_z * fn;
+	dst[15] = 1.0f;
+}
+
 Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 {
 	Render::Context* renderer = (Render::Context*)arena_alloc(arena, sizeof(Render::Context));
@@ -126,7 +148,6 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	gl->quad_program = gl_create_program("shaders/quad.vert", "shaders/quad.frag");
-	gl->text_program = gl_create_program("shaders/text.vert", "shaders/text.frag");
 
 	// Quad vertex array/buffer
 	f32 quad_vertices[] = {
@@ -149,7 +170,10 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), 0);
 
+	gl->quad_ubo = gl_create_ubo(sizeof(BoxUbo), nullptr);
+
 	// Text rendering
+	gl->text_program = gl_create_program("shaders/text.vert", "shaders/text.frag");
 	 
 	// Font texture loading
 	// TODO: Move offline
@@ -157,12 +181,16 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	if (FT_Init_FreeType(&ft)) { panic(); }
 
 	FT_Face face;
-	if(FT_New_Face(ft, "fonts/BerkeleyMono-Regular.otf", 0, &face)) { panic(); }
-	FT_Set_Pixel_Sizes(face, 0, 48);
+	//if(FT_New_Face(ft, "fonts/BerkeleyMono-Regular.ttf", 0, &face)) { panic(); }
+	if(FT_New_Face(ft, "fonts/Ovo-Regular.ttf", 0, &face)) { panic(); }
+	FT_Set_Pixel_Sizes(face, 0, 96);
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
 	for(unsigned char c = 0; c < MAX_FONT_CHARACTERS; c++) {
-		if(FT_Load_Char(face, c, FT_LOAD_RENDER)) { panic(); }
+		if(FT_Load_Char(face, c, FT_LOAD_RENDER)) { 
+			panic(); 
+		}
 
 		u32 tex;
 		glGenTextures(1, &tex);
@@ -176,8 +204,7 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 			0,
 			GL_RED,
 			GL_UNSIGNED_BYTE,
-			face->glyph->bitmap.buffer
-		);
+			face->glyph->bitmap.buffer);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -192,6 +219,7 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 		gl->font_characters[c] = font_character;
 	}
 
+	glBindTexture(GL_TEXTURE_2D, 0);
 	FT_Done_Face(face);
 	FT_Done_FreeType(ft);
 
@@ -199,26 +227,18 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	glGenVertexArrays(1, &gl->text_vao);
 	glBindVertexArray(gl->text_vao);
 
-	u32 text_vbo;
-	glGenBuffers(1, &text_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, text_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 6 * 4, nullptr, GL_STATIC_DRAW);
+	glGenBuffers(1, &gl->text_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, gl->text_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 6 * 4, nullptr, GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), 0);
 
-	// UBOs
-	gl->quad_ubo = gl_create_ubo(sizeof(BoxUbo), nullptr);
-
-	glViewport(0, 0, window->window_width, window->window_height);
-
-	// Unbind stuff
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
-
+	glViewport(0, 0, window->window_width, window->window_height);
 	return renderer;
 }
 
-// NOW: Render line of text.
 void platform_render_update(Render::Context* renderer, Render::State* render_state, Windowing::Context* window, Arena* arena)
 {
 	GlBackend* gl = (GlBackend*)renderer->backend;
@@ -269,4 +289,55 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 		// Draw
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 	}
+
+	// Draw text
+	// NOW: Add pipeline from render state for text lines
+	//  THEN: Font atlas packing
+	//  THEN: Multiple fonts
+	const char* text = "Hello, world!";
+	u32 text_len = 13;
+	float x = 32.0f;
+	float y = 32.0f;
+	float scale = 1.0f;
+	float color[3] = { 1.0f, 0.9f, 0.7f };
+
+	glUseProgram(gl->text_program);
+	glUniform3f(glGetUniformLocation(gl->text_program, "text_color"), color[0], color[1], color[2]);
+	glActiveTexture(GL_TEXTURE0);
+	glBindVertexArray(gl->text_vao);
+
+	float projection[16];
+	mat_ortho(0.0f, window->window_width, 0.0f, window->window_height, 0.0f, 500.0f, projection);
+    glUniformMatrix4fv(glGetUniformLocation(gl->text_program, "projection"), 1, GL_FALSE, projection);
+
+	for(u32 i = 0; i < text_len; i++) {
+		FontCharacter c = gl->font_characters[text[i]];
+
+		float xpos = x + c.bearing[0] * scale;
+		float ypos = y - (c.size[1] - c.bearing[1]) * scale;
+
+		float w = c.size[0] * scale;
+		float h = c.size[1] * scale;
+
+		float char_vertices[6][4] = {
+			{ xpos,     ypos + h, 0.0f, 0.0f },
+			{ xpos,     ypos,     0.0f, 1.0f },
+			{ xpos + w, ypos,     1.0f, 1.0f },
+
+			{ xpos,     ypos + h, 0.0f, 0.0f },
+			{ xpos + w, ypos,     1.0f, 1.0f },
+			{ xpos + w, ypos + h, 1.0f, 0.0f },
+		};
+
+		glBindTexture(GL_TEXTURE_2D, c.texture_id);
+		glBindBuffer(GL_ARRAY_BUFFER, gl->text_vbo);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(char_vertices), char_vertices);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        x += (c.advance >> 6) * scale;
+	}
+
+	// Unbind stuff
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
