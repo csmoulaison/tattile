@@ -22,7 +22,7 @@ namespace Render {
 		arena_init(&current->texts_arena, TEXTS_ARENA_SIZE);
 	}
 
-	void text(State* state, const char* str, float x, float y, float scale, float r, float g, float b)
+	void text(State* state, const char* str, float x, float y, float scale, float r, float g, float b, float a)
 	{
 		Text text;
 		u32 len = strlen(str);
@@ -36,6 +36,7 @@ namespace Render {
 		text.color[0] = r;
 		text.color[1] = g;
 		text.color[2] = b;
+		text.color[3] = a;
 		text.len = len;
 
 		state->texts[state->texts_len] = text;

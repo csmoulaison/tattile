@@ -16,7 +16,7 @@ namespace Render {
 		char* string;
 		u32 len;
 
-		float color[3];
+		float color[4];
 		float position[2];
 		float scale;
 	};

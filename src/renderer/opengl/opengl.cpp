@@ -307,7 +307,7 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 		float y = text->position[1];
 		float scale = text->scale;
 
-		glUniform3f(glGetUniformLocation(gl->text_program, "text_color"), text->color[0], text->color[1], text->color[2]);
+		glUniform4f(glGetUniformLocation(gl->text_program, "text_color"), text->color[0], text->color[1], text->color[2], text->color[3]);
 
 		for(u32 j = 0; j < text->len; j++) {
 			FontCharacter c = gl->font_characters[text->string[j]];

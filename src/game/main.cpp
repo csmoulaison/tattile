@@ -32,10 +32,6 @@ i32 main(i32 argc, char** argv)
 	double time_accumulator = 0.0f;
 	bool first_frame = true;
 
-	// NOW: < THIS: Every frame:
-	// - Free previous render state arena.
-	// - Set previous state arena to current state arena.
-	// - Create current render state arena.
 	while(game_close_requested(game) != true) {
 		double new_time = Time::seconds();
 		double frame_time = new_time - current_time;
