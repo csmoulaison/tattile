@@ -294,15 +294,7 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 	// NOW: Add pipeline from render state for text lines
 	//  THEN: Font atlas packing
 	//  THEN: Multiple fonts
-	const char* text = "Hello, world!";
-	u32 text_len = 13;
-	float x = 32.0f;
-	float y = 32.0f;
-	float scale = 1.0f;
-	float color[3] = { 1.0f, 0.9f, 0.7f };
-
 	glUseProgram(gl->text_program);
-	glUniform3f(glGetUniformLocation(gl->text_program, "text_color"), color[0], color[1], color[2]);
 	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(gl->text_vao);
 
@@ -310,31 +302,41 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 	mat_ortho(0.0f, window->window_width, 0.0f, window->window_height, 0.0f, 500.0f, projection);
     glUniformMatrix4fv(glGetUniformLocation(gl->text_program, "projection"), 1, GL_FALSE, projection);
 
-	for(u32 i = 0; i < text_len; i++) {
-		FontCharacter c = gl->font_characters[text[i]];
+	for(u32 i = 0; i < render_state->texts_len; i++) {
+		Render::Text* text = &render_state->texts[i];
+		float x = text->position[0];
+		float y = text->position[1];
+		float scale = text->scale;
 
-		float xpos = x + c.bearing[0] * scale;
-		float ypos = y - (c.size[1] - c.bearing[1]) * scale;
+		glUniform3f(glGetUniformLocation(gl->text_program, "text_color"), text->color[0], text->color[1], text->color[2]);
 
-		float w = c.size[0] * scale;
-		float h = c.size[1] * scale;
+		for(u32 j = 0; j < text->len; j++) {
+			FontCharacter c = gl->font_characters[text->string[j]];
 
-		float char_vertices[6][4] = {
-			{ xpos,     ypos + h, 0.0f, 0.0f },
-			{ xpos,     ypos,     0.0f, 1.0f },
-			{ xpos + w, ypos,     1.0f, 1.0f },
+			float xpos = x + c.bearing[0] * scale;
+			float ypos = y - (c.size[1] - c.bearing[1]) * scale;
 
-			{ xpos,     ypos + h, 0.0f, 0.0f },
-			{ xpos + w, ypos,     1.0f, 1.0f },
-			{ xpos + w, ypos + h, 1.0f, 0.0f },
-		};
+			float w = c.size[0] * scale;
+			float h = c.size[1] * scale;
 
-		glBindTexture(GL_TEXTURE_2D, c.texture_id);
-		glBindBuffer(GL_ARRAY_BUFFER, gl->text_vbo);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(char_vertices), char_vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        x += (c.advance >> 6) * scale;
+			float char_vertices[6][4] = {
+				{ xpos,     ypos + h, 0.0f, 0.0f },
+				{ xpos,     ypos,     0.0f, 1.0f },
+				{ xpos + w, ypos,     1.0f, 1.0f },
+
+				{ xpos,     ypos + h, 0.0f, 0.0f },
+				{ xpos + w, ypos,     1.0f, 1.0f },
+				{ xpos + w, ypos + h, 1.0f, 0.0f },
+			};
+
+			glBindTexture(GL_TEXTURE_2D, c.texture_id);
+			glBindBuffer(GL_ARRAY_BUFFER, gl->text_vbo);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(char_vertices), char_vertices);
+	        glBindBuffer(GL_ARRAY_BUFFER, 0);
+	        glDrawArrays(GL_TRIANGLES, 0, 6);
+	        x += (c.advance >> 6) * scale;
+		}
+		//printf("texted!\n");
 	}
 
 	// Unbind stuff
