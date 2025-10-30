@@ -24,8 +24,8 @@ void game_update(Game* game, Windowing::Context* window, Render::State* render_s
 	game->close_requested = Windowing::button_down(window, game->quit_button);
 	game->frames_since_init++;
 
-	Render::text(render_state, "Faust", 32.0f, 96.0f, 1.0f, 0.8, 0.8f, 0.8f);
-	Render::text(render_state, "The Damnable Life and Deservable Death", 32.0f, 32.0f, 0.5f, 0.8f, 0.8f, 0.8f);
+	Render::text(render_state, "Faust", 32.0f, window->window_height - 96.0f, 1.0f, 0.8, 0.8f, 0.8f);
+	Render::text(render_state, "After years of wandering the forest, Faust comes upon a crossroads.", 32.0f, window->window_height - 164.0f, 0.5f, 0.8f, 0.8f, 0.8f);
 }
 
 bool game_close_requested(Game* game)

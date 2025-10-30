@@ -291,9 +291,8 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 	}
 
 	// Draw text
-	// NOW: Add pipeline from render state for text lines
-	//  THEN: Font atlas packing
-	//  THEN: Multiple fonts
+	//  TODO: Font atlas packing
+	//  TODO: Multiple fonts
 	glUseProgram(gl->text_program);
 	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(gl->text_vao);
@@ -336,7 +335,6 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 	        glDrawArrays(GL_TRIANGLES, 0, 6);
 	        x += (c.advance >> 6) * scale;
 		}
-		//printf("texted!\n");
 	}
 
 	// Unbind stuff
