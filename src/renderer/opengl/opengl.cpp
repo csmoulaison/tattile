@@ -5,8 +5,6 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#define TEXT_MAX_CHARS 4096
-
 #define MAX_FONT_CHARACTERS 128
 
 struct FontCharacter {
@@ -21,13 +19,6 @@ typedef struct
 	f32 translation[16];
 	f32 scale[16];
 } BoxUbo;
-
-typedef struct
-{
-	// this is a mat2, but must be separated like this for padding requirements.
-	alignas(16) f32 transform_a[2];
-	alignas(16) f32 transform_b[2];
-} TextUbo;
 
 typedef struct {
 	FontCharacter font_characters[MAX_FONT_CHARACTERS];
