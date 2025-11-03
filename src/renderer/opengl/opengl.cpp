@@ -5,11 +5,14 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#define MAX_FONT_CHARACTERS 128
+#define MAX_FONT_CHARS 128
+#define MAX_RENDER_CHARS 1024
 
 struct FontCharacter {
-	u32 texture_id;
-	u32 size[2];
+	u32 x;
+	u32 y;
+	u32 w;
+	u32 h;
 	i32 bearing[2];
 	u32 advance;
 };
@@ -21,7 +24,7 @@ typedef struct
 } BoxUbo;
 
 typedef struct {
-	FontCharacter font_characters[MAX_FONT_CHARACTERS];
+	FontCharacter font_characters[MAX_FONT_CHARS];
 
 	u32 quad_program;
 	u32 quad_ubo;
@@ -33,6 +36,7 @@ typedef struct {
 	
 	u32 text_buffer_ssbo;
 	u32 font_texture;
+	u32 font_texture_length;
 } GlBackend;
 
 u32 gl_compile_shader(const char* filename, GLenum type)
@@ -165,9 +169,58 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 
 	// Text rendering
 	gl->text_program = gl_create_program("shaders/text.vert", "shaders/text.frag");
-	 
+
+	// Font proprietary loading:
+	FILE* font_file = fopen("fonts/out.cmfont", "r");
+	if(!font_file) { panic(); }
+
+	u32 atlas_length;
+	u32 num_chars;
+	fread(&atlas_length, sizeof(u32), 1, font_file);
+	fread(&num_chars, sizeof(u32), 1, font_file);
+	for(u32 i = 0; i < num_chars; i++) {
+		FontCharacter* ch = &gl->font_characters[i];
+		fread(&ch->x, sizeof(u32), 1, font_file);
+		fread(&ch->y, sizeof(u32), 1, font_file);
+		fread(&ch->w, sizeof(u32), 1, font_file);
+		fread(&ch->h, sizeof(u32), 1, font_file);
+
+		fread(&ch->bearing[0], sizeof(i32), 1, font_file);
+		fread(&ch->bearing[1], sizeof(i32), 1, font_file);
+
+		fread(&ch->advance, sizeof(u32), 1, font_file);
+	}
+	gl->font_texture_length = atlas_length;
+	u32 atlas_area = atlas_length * atlas_length;
+	u8 font_pixels[atlas_area];
+	fread(font_pixels, sizeof(u8), atlas_area, font_file);
+	fclose(font_file);
+
+	glGenTextures(1, &gl->font_texture);
+	glBindTexture(GL_TEXTURE_2D, gl->font_texture);
+	glTexImage2D(
+		GL_TEXTURE_2D, 
+		0, 
+		GL_RED, 
+		atlas_length,
+		atlas_length,
+		0,
+		GL_RED,
+		GL_UNSIGNED_BYTE,
+		font_pixels);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Text buffer ssbo
+	glGenBuffers(1, &gl->text_buffer_ssbo);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float[4]) * 2 * MAX_RENDER_CHARS, nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, gl->text_buffer_ssbo);
+
 	// Font texture loading
-	// TODO: Move offline
+	/* TODO: Move offline
 	FT_Library ft;
 	if (FT_Init_FreeType(&ft)) { panic(); }
 
@@ -178,7 +231,7 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	for(unsigned char c = 0; c < MAX_FONT_CHARACTERS; c++) {
+	for(unsigned char c = 0; c < MAX_FONT_CHARS; c++) {
 		if(FT_Load_Char(face, c, FT_LOAD_RENDER)) { 
 			panic(); 
 		}
@@ -223,6 +276,7 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 6 * 4, nullptr, GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), 0);
+	*/
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -281,52 +335,55 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 	}
 
-	// Draw text
-	//  TODO: Font atlas packing
-	//  TODO: Multiple fonts
 	glUseProgram(gl->text_program);
 	glActiveTexture(GL_TEXTURE0);
-	glBindVertexArray(gl->text_vao);
+	glBindVertexArray(gl->quad_vao);
 
-	float projection[16];
-	mat_ortho(0.0f, window->window_width, 0.0f, window->window_height, 0.0f, 500.0f, projection);
-    glUniformMatrix4fv(glGetUniformLocation(gl->text_program, "projection"), 1, GL_FALSE, projection);
+	glUniform2f(glGetUniformLocation(gl->text_program, "screen_size"), window->window_width, window->window_height);
 
+	float render_chars[MAX_RENDER_CHARS][8];
+	u32 render_chars_len = 0;
 	for(u32 i = 0; i < render_state->texts_len; i++) {
 		Render::Text* text = &render_state->texts[i];
 		float x = text->position[0];
 		float y = text->position[1];
 		float scale = text->scale;
 
+		// NOW: Text color included with SSBO.
 		glUniform4f(glGetUniformLocation(gl->text_program, "text_color"), text->color[0], text->color[1], text->color[2], text->color[3]);
 
 		for(u32 j = 0; j < text->len; j++) {
-			FontCharacter c = gl->font_characters[text->string[j]];
+			float* render_char = render_chars[render_chars_len];
+			render_chars_len++;
+			FontCharacter* c = &gl->font_characters[text->string[j]];
+			
+			float xpos = x + c->bearing[0] * scale;
+			float ypos = y - (c->h - c->bearing[1]) * scale;
+			float w = c->w * scale;
+			float h = c->h * scale;
 
-			float xpos = x + c.bearing[0] * scale;
-			float ypos = y - (c.size[1] - c.bearing[1]) * scale;
+			render_char[0] = ((float)c->x) / gl->font_texture_length;
+			render_char[1] = ((float)c->y) / gl->font_texture_length;
+			render_char[2] = ((float)c->w) / gl->font_texture_length;
+			render_char[3] = ((float)c->h) / gl->font_texture_length;
 
-			float w = c.size[0] * scale;
-			float h = c.size[1] * scale;
+			render_char[4] = xpos;
+			render_char[5] = ypos;
+			render_char[6] = w;
+			render_char[7] = h;
 
-			float char_vertices[6][4] = {
-				{ xpos,     ypos + h, 0.0f, 0.0f },
-				{ xpos,     ypos,     0.0f, 1.0f },
-				{ xpos + w, ypos,     1.0f, 1.0f },
-
-				{ xpos,     ypos + h, 0.0f, 0.0f },
-				{ xpos + w, ypos,     1.0f, 1.0f },
-				{ xpos + w, ypos + h, 1.0f, 0.0f },
-			};
-
-			glBindTexture(GL_TEXTURE_2D, c.texture_id);
-			glBindBuffer(GL_ARRAY_BUFFER, gl->text_vbo);
-			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(char_vertices), char_vertices);
 	        glBindBuffer(GL_ARRAY_BUFFER, 0);
 	        glDrawArrays(GL_TRIANGLES, 0, 6);
-	        x += (c.advance >> 6) * scale;
+	        x += (c->advance >> 6) * scale;
 		}
 	}
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
+	glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float[8]) * render_chars_len, render_chars);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gl->font_texture);
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 6, render_chars_len);
 
 	// Unbind stuff
 	glBindVertexArray(0);

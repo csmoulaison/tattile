@@ -7,5 +7,5 @@ uniform vec4 text_color;
 
 void main()
 {
-	frag_color = text_color * vec4(1.0, 1.0, 1.0, texture(tex, uv).r);
+	frag_color = text_color * vec4(1.0, 1.0, 1.0, texture(tex, vec2(uv.x, uv.y)).r);
 }
