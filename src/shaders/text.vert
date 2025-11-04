@@ -1,10 +1,12 @@
 #version 430 core
 layout (location = 0) in vec2 vert;
 out vec2 uv;
+out vec4 text_color;
 
 struct Char {
 	vec4 src;
 	vec4 dst;
+	vec4 color;
 };
 
 layout(std430, binding = 0) buffer txt
@@ -14,6 +16,7 @@ layout(std430, binding = 0) buffer txt
 
 uniform vec2 screen_size;
 
+// NOW: This is a mess so fix it?
 void main()
 {
 	// -1.0 to 1.0 -> 0.0 to 1.0
@@ -29,4 +32,5 @@ void main()
 
 	gl_Position = vec4(pos, 0.0f, 1.0f);
 	uv = ch.src.xy + ch.src.zw * uvert.xy;
+	text_color = ch.color;
 }

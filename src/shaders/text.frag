@@ -1,9 +1,9 @@
 #version 430 core
 in vec2 uv;
+in vec4 text_color;
 out vec4 frag_color;
 
 uniform sampler2D tex;
-uniform vec4 text_color;
 
 void main()
 {
