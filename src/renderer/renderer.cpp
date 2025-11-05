@@ -22,25 +22,45 @@ namespace Render {
 		arena_init(&current->texts_arena, TEXTS_ARENA_SIZE);
 	}
 
-	void text(State* state, const char* str, float x, float y, float scale, float r, float g, float b, float a)
+	void character(State* state, char ch, float x, float y, float scale, float r, float g, float b, float a)
 	{
-		Text text;
-		u32 len = strlen(str);
-		text.string = (char*)arena_alloc(&state->texts_arena, len);
-		for(u32 i = 0; i < len; i++) {
-			text.string[i] = str[i];
-		}
-		text.position[0] = x;
-		text.position[1] = y;
-		text.scale = scale;
-		text.color[0] = r;
-		text.color[1] = g;
-		text.color[2] = b;
-		text.color[3] = a;
-		text.len = len;
+		FontGlyph glyph = state->font.font_glyphs[ch];
+		Character c;
 
-		state->texts[state->texts_len] = text;
-		state->texts_len++;
+		c.src[0] = ((float)glyph->x) / state->font.atlas_length;
+		c.src[1] = ((float)glyph->y) / state->font.atlas_length;
+		c.src[2] = ((float)glyph->w) / state->font.atlas_length;
+		c.src[3] = ((float)glyph->h) / state->font.atlas_length;
+
+		c.dst[0] = xpos * scale;
+		c.dst[1] = ypos * scale;
+		c.dst[2] = w * scale;
+		c.dst[3] = h * scale;
+
+		c.color[0] = r;
+		c.color[1] = g;
+		c.color[2] = b;
+		c.color[3] = a;
+
+		state->characters[state->characters_len] = c;
+		state->characters_len++;
+	}
+
+	void text_line(State* state, const* char string, float x, float y, float r, float g, float b, float a)
+	{
+		float x = x;
+		float y = y;
+
+		i32 len = strlen(string);
+		for(i32 i = 0; i < len; i++) {
+			FontGlyph glyph = 
+			char c = string[i];
+
+			float cur_x = x + c->bearing[0];
+			float cur_y = y - (c->h - c->bearing[1]);
+			Render::character(state, c, cur_x, cur_y, r, g, b, a);
+	        x += (c->advance >> 6);
+		}
 	}
 
 	State interpolate_states(State* previous, State* current, f32 t)

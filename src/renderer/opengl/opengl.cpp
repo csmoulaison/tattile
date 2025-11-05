@@ -5,24 +5,6 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#define MAX_FONT_CHARS 128
-#define MAX_RENDER_CHARS 1024
-
-struct FontCharacter {
-	u32 x;
-	u32 y;
-	u32 w;
-	u32 h;
-	i32 bearing[2];
-	u32 advance;
-};
-
-struct RenderCharacter {
-	float src[4];
-	float dst[4];
-	float color[4];
-};
-
 typedef struct
 {
 	f32 translation[16];
@@ -30,8 +12,6 @@ typedef struct
 } BoxUbo;
 
 typedef struct {
-	FontCharacter font_characters[MAX_FONT_CHARS];
-
 	u32 quad_program;
 	u32 quad_ubo;
 	u32 quad_vao;
@@ -190,10 +170,8 @@ Render::Context* platform_render_init(Windowing::Context* window, Arena* arena)
 		fread(&ch->y, sizeof(u32), 1, font_file);
 		fread(&ch->w, sizeof(u32), 1, font_file);
 		fread(&ch->h, sizeof(u32), 1, font_file);
-
 		fread(&ch->bearing[0], sizeof(i32), 1, font_file);
 		fread(&ch->bearing[1], sizeof(i32), 1, font_file);
-
 		fread(&ch->advance, sizeof(u32), 1, font_file);
 	}
 	gl->font_texture_length = atlas_length;
@@ -290,45 +268,30 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 
 	RenderCharacter render_chars[MAX_RENDER_CHARS];
 	u32 render_chars_len = 0;
-	for(u32 i = 0; i < render_state->texts_len; i++) {
-		Render::Text* text = &render_state->texts[i];
-		float x = text->position[0];
-		float y = text->position[1];
-		float scale = text->scale;
+	for(u32 i = 0; i < render_state->characters_len; i++) {
+		Render::Character* c = &render_state->texts[i];
+		float x = c->position[0];
+		float y = c->position[1];
+		float scale = c->scale;
 
-		for(u32 j = 0; j < text->len; j++) {
-			RenderCharacter* render_char = &render_chars[render_chars_len];
-			render_chars_len++;
-			FontCharacter* c = &gl->font_characters[text->string[j]];
-			
-			float xpos = x + c->bearing[0] * scale;
-			float ypos = y - (c->h - c->bearing[1]) * scale;
-			float w = c->w * scale;
-			float h = c->h * scale;
+		RenderCharacter* render_char = &render_chars[render_chars_len];
+		render_chars_len++;
+		FontCharacter* font_char = &gl->font_characters[text->string[j]];
+		
+		render_char->src[0] = ((float)c->x) / gl->font_texture_length;
+		render_char->src[1] = ((float)c->y) / gl->font_texture_length;
+		render_char->src[2] = ((float)c->w) / gl->font_texture_length;
+		render_char->src[3] = ((float)c->h) / gl->font_texture_length;
 
-			render_char->src[0] = ((float)c->x) / gl->font_texture_length;
-			render_char->src[1] = ((float)c->y) / gl->font_texture_length;
-			render_char->src[2] = ((float)c->w) / gl->font_texture_length;
-			render_char->src[3] = ((float)c->h) / gl->font_texture_length;
+		render_char->dst[0] = xpos;
+		render_char->dst[1] = ypos;
+		render_char->dst[2] = w;
+		render_char->dst[3] = h;
 
-			render_char->dst[0] = xpos;
-			render_char->dst[1] = ypos;
-			render_char->dst[2] = w;
-			render_char->dst[3] = h;
-
-			render_char->color[0] = text->color[0];
-			render_char->color[1] = text->color[1];
-			render_char->color[2] = text->color[2];
-			render_char->color[3] = text->color[3];
-
-	        glBindBuffer(GL_ARRAY_BUFFER, 0);
-	        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	        // NOW: The (x += advance) and this other calculatory shit must be done
-	        // on the rendering API side and must be composable so that cool
-	        // per-character effects can be done.
-	        x += (c->advance >> 6) * scale;
-		}
+		render_char->color[0] = c->color[0];
+		render_char->color[1] = c->color[1];
+		render_char->color[2] = c->color[2];
+		render_char->color[3] = c->color[3];
 	}
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
