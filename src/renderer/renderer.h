@@ -7,7 +7,14 @@
 #define MAX_RENDER_RECTS 16
 #define MAX_FONT_GLYPHS 128
 #define MAX_RENDER_CHARS 1024
-#define NUM_FONTS 2
+
+// NOTE: FontFace values coincide with the order of strings in font_filenames.
+enum FontFace {
+	FONT_FACE_SMALL,
+	FONT_FACE_LARGE,
+	NUM_FONTS
+};
+#define FONT_FILENAMES { "fonts/ovo_small.cmfont", "fonts/ovo_large.cmfont" };
 
 namespace Render {
 	struct FontGlyph {
@@ -34,7 +41,6 @@ namespace Render {
 	// NOW: This shall be used instead of the Character array in state, so that each
 	// can reference the font.
 	struct CharacterList {
-		u32 font_id;
 		u16 characters_len;
 		Character characters[MAX_RENDER_CHARS];
 	};
@@ -43,10 +49,7 @@ namespace Render {
 		Rect rects[MAX_RENDER_RECTS];
 		u8 rects_len;
 
-		Character characters[MAX_RENDER_CHARS];
-		u32 characters_len;
-
-		u32 font_id;
+		CharacterList character_lists[NUM_FONTS];
 	};
 
 	struct Context {
@@ -56,7 +59,7 @@ namespace Render {
 		State previous_state;
 		State current_state;
 
-		Font font; 
+		Font fonts[NUM_FONTS]; 
 	};
 }
 

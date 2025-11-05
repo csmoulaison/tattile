@@ -10,31 +10,34 @@ namespace Render {
 		Context* context = platform_render_init(window, arena);
 		context->first_frame = true;
 
-		// Font loading
-		FILE* font_file = fopen("fonts/out.cmfont", "r");
-		if(!font_file) { panic(); }
+		const char* font_filenames[NUM_FONTS] = FONT_FILENAMES;
+		for(u8 i = 0; i < NUM_FONTS; i++) {
+			// Font loading
+			FILE* font_file = fopen(font_filenames[i], "r");
+			if(!font_file) { panic(); }
 
-		Font* font = &context->font;
-		u32 num_chars;
-		fread(&font->texture_width, sizeof(u32), 1, font_file);
-		fread(&num_chars, sizeof(u32), 1, font_file);
-		for(u32 i = 0; i < num_chars; i++) {
-			FontGlyph* glyph = &font->glyphs[i];
-			fread(&glyph->x, sizeof(u32), 1, font_file);
-			fread(&glyph->y, sizeof(u32), 1, font_file);
-			fread(&glyph->w, sizeof(u32), 1, font_file);
-			fread(&glyph->h, sizeof(u32), 1, font_file);
-			fread(&glyph->bearing[0], sizeof(i32), 1, font_file);
-			fread(&glyph->bearing[1], sizeof(i32), 1, font_file);
-			fread(&glyph->advance, sizeof(u32), 1, font_file);
+			Font* font = &context->fonts[i];
+			u32 num_chars;
+			fread(&font->texture_width, sizeof(u32), 1, font_file);
+			fread(&num_chars, sizeof(u32), 1, font_file);
+			for(u32 i = 0; i < num_chars; i++) {
+				FontGlyph* glyph = &font->glyphs[i];
+				fread(&glyph->x, sizeof(u32), 1, font_file);
+				fread(&glyph->y, sizeof(u32), 1, font_file);
+				fread(&glyph->w, sizeof(u32), 1, font_file);
+				fread(&glyph->h, sizeof(u32), 1, font_file);
+				fread(&glyph->bearing[0], sizeof(i32), 1, font_file);
+				fread(&glyph->bearing[1], sizeof(i32), 1, font_file);
+				fread(&glyph->advance, sizeof(u32), 1, font_file);
+			}
+
+			u32 texture_area = font->texture_width * font->texture_width;
+			u8 font_pixels[texture_area];
+			fread(font_pixels, sizeof(u8), texture_area, font_file);
+			fclose(font_file);
+
+			font->texture_id = platform_create_texture_mono(context, font_pixels, font->texture_width, font->texture_width);
 		}
-
-		u32 texture_area = font->texture_width * font->texture_width;
-		u8 font_pixels[texture_area];
-		fread(font_pixels, sizeof(u8), texture_area, font_file);
-		fclose(font_file);
-
-		font->texture_id = platform_create_texture_mono(context, font_pixels, font->texture_width, font->texture_width);
 
 		return context;
 	}
@@ -76,43 +79,45 @@ skip_interpolation:
 		renderer->current_state = {};
 	}
 
-	void character(Context* context, char ch, float x, float y, float r, float g, float b, float a)
+	void character(Context* context, char c, float x, float y, float r, float g, float b, float a, FontFace face)
 	{
 		State* state = &context->current_state;
-		FontGlyph* glyph = &context->font.glyphs[ch];
-		Character* c = &state->characters[state->characters_len];
-		state->characters_len++;
+		CharacterList* list = &state->character_lists[face];
+		Character* character = &list->characters[list->characters_len];
 
-		c->src[0] = ((float)glyph->x) / context->font.texture_width;
-		c->src[1] = ((float)glyph->y) / context->font.texture_width;
-		c->src[2] = ((float)glyph->w) / context->font.texture_width;
-		c->src[3] = ((float)glyph->h) / context->font.texture_width;
+		Font* font = &context->fonts[face];
+		FontGlyph* glyph = &font->glyphs[c];
 
-		c->dst[0] = x;
-		c->dst[1] = y;
-		c->dst[2] = glyph->w;
-		c->dst[3] = glyph->h;
+		list->characters_len++;
 
-		c->color[0] = r;
-		c->color[1] = g;
-		c->color[2] = b;
-		c->color[3] = a;
+		u32 tex_w = font->texture_width;
+		character->src[0] = ((float)glyph->x) / tex_w;
+		character->src[1] = ((float)glyph->y) / tex_w;
+		character->src[2] = ((float)glyph->w) / tex_w;
+		character->src[3] = ((float)glyph->h) / tex_w;
 
-		// NOW: This will of course be changed once we index fonts by render array.
-		state->font_id = context->font.texture_id;
+		character->dst[0] = x;
+		character->dst[1] = y;
+		character->dst[2] = glyph->w;
+		character->dst[3] = glyph->h;
+
+		character->color[0] = r;
+		character->color[1] = g;
+		character->color[2] = b;
+		character->color[3] = a;
 	}
 
-	void text_line(Context* context, const char* string, float x, float y, float r, float g, float b, float a)
+	void text_line(Context* context, const char* string, float x, float y, float r, float g, float b, float a, FontFace face)
 	{
 		State* state = &context->current_state;
 		i32 len = strlen(string);
 		for(i32 i = 0; i < len; i++) {
-			char ch = string[i];
-			FontGlyph* glyph = &context->font.glyphs[ch];
+			char c = string[i];
+			FontGlyph* glyph = &context->fonts[face].glyphs[c];
 
 			float cur_x = x + glyph->bearing[0];
 			float cur_y = y - (glyph->h - glyph->bearing[1]);
-			Render::character(context, ch, cur_x, cur_y, r, g, b, a);
+			Render::character(context, c, cur_x, cur_y, r, g, b, a, face);
 	        x += (glyph->advance >> 6);
 		}
 	}

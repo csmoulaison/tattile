@@ -156,7 +156,7 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 	}
 	
 	// Gl render
-	glClearColor(0.0f, 0.0f, 0.0f, 1);
+	glClearColor(0.2f, 0.4f, 0.6f, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Draw rects
@@ -194,17 +194,22 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 	}
 
+	// Text rendering
 	glUseProgram(gl->text_program);
 	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(gl->quad_vao);
-
 	glUniform2f(glGetUniformLocation(gl->text_program, "screen_size"), window->window_width, window->window_height);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
-	glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(Render::Character) * render_state->characters_len, render_state->characters);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, render_state->font_id);
-	glDrawArraysInstanced(GL_TRIANGLES, 0, 6, render_state->characters_len);
+	// NOW: Bind texture per CharacterList
+	for(u8 i = 0; i < NUM_FONTS; i++) {
+		Render::CharacterList* list = &render_state->character_lists[i];
+		Render::Font* font = &renderer->fonts[i];
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(Render::Character) * list->characters_len, list->characters);
+		glBindTexture(GL_TEXTURE_2D, font->texture_id);
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, list->characters_len);
+	}
 
 	// Unbind stuff
 	glBindVertexArray(0);
