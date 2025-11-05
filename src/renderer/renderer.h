@@ -8,6 +8,11 @@
 #define MAX_FONT_GLYPHS 128
 #define MAX_RENDER_CHARS 1024
 
+// TODO: We want to think about how differently sized UI will be implemented, as
+// these font sizes are now baked into the packing/loading pipeline. We could
+// allow these FontFaces to be retargeted to different textures being loaded/
+// unloaded as needed, or we could just make the game UI layer handle it.
+ 
 // NOTE: FontFace values coincide with the order of strings in font_filenames.
 enum FontFace {
 	FONT_FACE_SMALL,
@@ -38,8 +43,6 @@ namespace Render {
 		float color[4];
 	};
 
-	// NOW: This shall be used instead of the Character array in state, so that each
-	// can reference the font.
 	struct CharacterList {
 		u16 characters_len;
 		Character characters[MAX_RENDER_CHARS];

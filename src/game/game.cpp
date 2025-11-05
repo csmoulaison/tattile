@@ -24,9 +24,6 @@ void game_update(Game* game, Windowing::Context* window, Render::Context* render
 	game->close_requested = Windowing::button_down(window, game->quit_button);
 	game->frames_since_init++;
 
-	// NOW: Need this or it doesn't render the first character. WHY?
-	Render::text_line(renderer, " ", 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, FONT_FACE_SMALL);
-
 	Render::text_line(
 		renderer, 
 		"Faust", 
