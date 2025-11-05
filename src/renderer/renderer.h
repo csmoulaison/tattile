@@ -7,6 +7,7 @@
 #define MAX_RENDER_RECTS 16
 #define MAX_FONT_GLYPHS 128
 #define MAX_RENDER_CHARS 1024
+#define NUM_FONTS 2
 
 namespace Render {
 	struct FontGlyph {
@@ -19,8 +20,9 @@ namespace Render {
 	};
 
 	struct Font {
-		u32 atlas_length;
-		FontGlyph glyph[MAX_FONT_GLYPHS];
+		u32 texture_id;
+		u32 texture_width;
+		FontGlyph glyphs[MAX_FONT_GLYPHS];
 	};
 
 	struct Character {
@@ -29,11 +31,12 @@ namespace Render {
 		float color[4];
 	};
 
-	struct Context {
-		void* backend;
-
-		// array later.
-		Font font; 
+	// NOW: This shall be used instead of the Character array in state, so that each
+	// can reference the font.
+	struct CharacterList {
+		u32 font_id;
+		u16 characters_len;
+		Character characters[MAX_RENDER_CHARS];
 	};
 
 	struct State {
@@ -41,11 +44,24 @@ namespace Render {
 		u8 rects_len;
 
 		Character characters[MAX_RENDER_CHARS];
-		u16 characters_len;
+		u32 characters_len;
+
+		u32 font_id;
+	};
+
+	struct Context {
+		void* backend;
+
+		bool first_frame;
+		State previous_state;
+		State current_state;
+
+		Font font; 
 	};
 }
 
 Render::Context* platform_render_init(Windowing::Context* window, Arena* arena);
 void platform_render_update(Render::Context* renderer, Render::State* render_state, Windowing::Context* window, Arena* arena);
+u32 platform_create_texture_mono(Render::Context* renderer, u8* pixels, u32 w, u32 h);
 
 #endif

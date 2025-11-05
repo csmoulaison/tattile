@@ -15,6 +15,7 @@
 #include "base/arena.h"
 #include "base/string.h"
 #include "base/rect.h"
+#include "base/mat.h"
 #include "base/sizes.h"
 #include "base/interpolate.h"
 #include "base/random.h"

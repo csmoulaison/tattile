@@ -20,17 +20,9 @@ i32 main(i32 argc, char** argv)
 	Game* game;
 	game = game_init(window, &program_arena);
 
-	Render::State* previous_render_state = (Render::State*)arena_alloc(&program_arena, sizeof(Render::State));
-	Render::State* current_render_state = (Render::State*)arena_alloc(&program_arena, sizeof(Render::State));
-	arena_init(&current_render_state->texts_arena, 16000); // TODO: Suballocation
-	arena_init(&previous_render_state->texts_arena, 16000); // TODO: Suballocation
-	*previous_render_state = {};
-	*current_render_state = {};
-
 	double time = 0.0f;
 	double current_time = Time::seconds();
 	double time_accumulator = 0.0f;
-	bool first_frame = true;
 
 	while(game_close_requested(game) != true) {
 		double new_time = Time::seconds();
@@ -45,24 +37,15 @@ i32 main(i32 argc, char** argv)
 			Windowing::update(window, &program_arena);
 
 			// Swap render states.
-			advance_state(previous_render_state, current_render_state);
-			game_update(game, window, current_render_state);
+			Render::advance_state(renderer);
+			game_update(game, window, renderer);
 
 			time_accumulator -= BASE_FRAME_LENGTH;
 			time += BASE_FRAME_LENGTH;
 		}
 
-		Render::State interpolated_render_state;
-		if(first_frame) {
-			first_frame = false;
-			interpolated_render_state = *current_render_state;
-		} else {
-			double time_alpha = time_accumulator / BASE_FRAME_LENGTH;
-			interpolated_render_state = Render::interpolate_states(previous_render_state, current_render_state, time_alpha);
-		}
-
 		// Render based on render states now.
-		Render::update(renderer, &interpolated_render_state, window, &program_arena);
+		Render::update(renderer, window, time_accumulator / BASE_FRAME_LENGTH, &program_arena);
 		Windowing::swap_buffers(window);
 	}
 }
