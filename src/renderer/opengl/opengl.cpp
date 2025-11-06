@@ -14,9 +14,6 @@ typedef struct {
 	u32 quad_vao;
 
 	u32 text_program;
-	u32 text_vao;
-	u32 text_vbo;
-	
 	u32 text_buffer_ssbo;
 } GlBackend;
 
