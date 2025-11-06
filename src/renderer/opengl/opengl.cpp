@@ -200,7 +200,6 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 	glBindVertexArray(gl->quad_vao);
 	glUniform2f(glGetUniformLocation(gl->text_program, "screen_size"), window->window_width, window->window_height);
 
-	// NOW: Bind texture per CharacterList
 	for(u8 i = 0; i < NUM_FONTS; i++) {
 		Render::CharacterList* list = &render_state->character_lists[i];
 		Render::Font* font = &renderer->fonts[i];

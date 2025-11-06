@@ -1,11 +1,8 @@
 mkdir ../bin
 cp -r ../src/shaders ../bin/
 
-./fonts/atlas ./fonts/Ovo-Regular.ttf 64 > /dev/null
-mv out.cmfont ../bin/fonts/ovo_small.cmfont
-
-./fonts/atlas ./fonts/Ovo-Regular.ttf 108 > /dev/null
-cp out.cmfont ../bin/fonts/ovo_large.cmfont
+./fonts/atlas ./fonts/Ovo-Regular.ttf ../bin/fonts/ovo_small.cmfont 64 > /dev/null
+./fonts/atlas ./fonts/Ovo-Regular.ttf ../bin/fonts/ovo_large.cmfont 108 > /dev/null
 
 g++ -g -o ../bin/tattile\
 	../src/game/main.cpp ../src/window/xlib/xlib_window.cpp ../src/time/unix/unix_time.cpp ../src/renderer/opengl/opengl.cpp \
