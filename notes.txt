@@ -1,3 +1,16 @@
+11.5.25
+=======
+Actually cool as fuck. Make node networks which are the scope hierarchy of your 
+program. One for each file, and one connected one. When editing and bringing up
+search, for instance, the structure specific to the file is brought up and search
+results are highlighted within their proper node space.
+
+This, along with cool text color highlighting type stuff as well. Maybe also 
+introduce the shifting feature to only show within a certain scope at one time.
+
+
+OLDER
+=====
 Maybe "tat" or "tt" or switch back to "jf" for "jeff"?
 
 Every character types remains either brighter or maybe yellow for a time as it 

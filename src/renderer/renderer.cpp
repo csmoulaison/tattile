@@ -1,6 +1,6 @@
 #include "renderer/renderer.h"
 
-#define RENDERER_NO_INTERPOLATION false
+#define RENDERER_NO_INTERPOLATION true
 #define TEXTS_ARENA_SIZE 16000
 
 namespace Render {
@@ -140,6 +140,9 @@ skip_interpolation:
 		for(i32 i = 0; i < len; i++) {
 			x_placements[i] -= off_x;
 			y_placements[i] -= off_y;
+
+			x_placements[i] = floor(x_placements[i]);
+			y_placements[i] = floor(y_placements[i]);
 		}
 	}
 

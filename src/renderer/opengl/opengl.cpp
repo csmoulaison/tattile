@@ -2,9 +2,6 @@
 
 #include "GL/gl3w.h"
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 typedef struct
 {
 	f32 translation[16];
@@ -247,7 +244,7 @@ u32 platform_create_texture_mono(Render::Context* renderer, u8* pixels, u32 w, u
 		pixels);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	return id;
 }
