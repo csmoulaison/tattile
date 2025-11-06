@@ -14,23 +14,19 @@ layout(std430, binding = 0) buffer txt
 	Char string[];
 } text;
 
-uniform vec2 screen_size;
-
-// NOW: This is a mess so fix it?
 void main()
 {
-	// -1.0 to 1.0 -> 0.0 to 1.0
-	vec2 uvert = vec2((vert.x + 1.0f) / 2.0f, (vert.y + 1.0f) / 2.0f);
-	uvert = vec2(uvert.x, 1.0 - uvert.y);
-	vec2 uvert2 = vec2(uvert.x, 1.0 - uvert.y);
-
+	vec2 normal_vert = vert / vec2(2.0f) + vec2(0.5f);
 	Char ch = text.string[gl_InstanceID];
-	vec2 dst_xy = ch.dst.xy / screen_size;
-	vec2 dst_zw = ch.dst.zw / screen_size;
-	vec2 pos = dst_xy + dst_zw * uvert2.xy;
-	pos -= vec2(1.0f, 0.0f);
 
-	gl_Position = vec4(pos, 0.0f, 1.0f);
-	uv = ch.src.xy + ch.src.zw * uvert.xy;
+	// Vert position
+	vec2 pos2d = ch.dst.xy + ch.dst.zw * normal_vert;
+	gl_Position = vec4(pos2d, 0.0f, 1.0f);
+
+	// UV coordinates
+	vec2 flipped_vert = vec2(normal_vert.x, 1.0f - normal_vert.y);
+	uv = ch.src.xy + ch.src.zw * flipped_vert;
+
+	// Text color
 	text_color = ch.color;
 }

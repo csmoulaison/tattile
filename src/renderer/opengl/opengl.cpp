@@ -198,11 +198,26 @@ void platform_render_update(Render::Context* renderer, Render::State* render_sta
 	glUseProgram(gl->text_program);
 	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(gl->quad_vao);
-	glUniform2f(glGetUniformLocation(gl->text_program, "screen_size"), window->window_width, window->window_height);
 
 	for(u8 i = 0; i < NUM_FONTS; i++) {
 		Render::CharacterList* list = &render_state->character_lists[i];
 		Render::Font* font = &renderer->fonts[i];
+
+		for(u32 j = 0; j < list->characters_len; j++) {
+			Render::Character* character = &list->characters[j];
+
+			character->dst[0] /= window->window_width;
+			character->dst[1] /= window->window_height;
+			character->dst[0] *= 2.0f;
+			character->dst[1] *= 2.0f;
+			character->dst[0] -= 1.0f;
+			character->dst[1] -= 1.0f;
+
+			character->dst[2] /= window->window_width;
+			character->dst[3] /= window->window_height;
+			character->dst[2] *= 2.0f;
+			character->dst[3] *= 2.0f;
+		}
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, gl->text_buffer_ssbo);
 		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(Render::Character) * list->characters_len, list->characters);

@@ -34,6 +34,7 @@ namespace Render {
 	struct Font {
 		u32 texture_id;
 		u32 texture_width;
+		u32 size;
 		FontGlyph glyphs[MAX_FONT_GLYPHS];
 	};
 

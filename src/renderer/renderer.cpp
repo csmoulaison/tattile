@@ -37,6 +37,7 @@ namespace Render {
 			fclose(font_file);
 
 			font->texture_id = platform_create_texture_mono(context, font_pixels, font->texture_width, font->texture_width);
+			font->size = font->glyphs['O'].h;
 		}
 
 		return context;
@@ -107,18 +108,60 @@ skip_interpolation:
 		character->color[3] = a;
 	}
 
-	void text_line(Context* context, const char* string, float x, float y, float r, float g, float b, float a, FontFace face)
+	// Placements must be preallocated float * string length.
+	void text_line_placements(
+		Context* context,
+		const char* string,
+		float* x_placements,
+		float* y_placements,
+		float x,
+		float y,
+		float anchor_x,
+		float anchor_y,
+		FontFace face)
 	{
-		State* state = &context->current_state;
+		Font* font = &context->fonts[face];
+		
+		float line_width = 0;
+		float cur_x = x;
+
 		i32 len = strlen(string);
 		for(i32 i = 0; i < len; i++) {
 			char c = string[i];
-			FontGlyph* glyph = &context->fonts[face].glyphs[c];
+			FontGlyph* glyph = &font->glyphs[c];
 
-			float cur_x = x + glyph->bearing[0];
-			float cur_y = y - (glyph->h - glyph->bearing[1]);
-			Render::character(context, c, cur_x, cur_y, r, g, b, a, face);
-	        x += (glyph->advance >> 6);
+			x_placements[i] = cur_x + glyph->bearing[0];
+			y_placements[i] = y - (glyph->h - glyph->bearing[1]);
+	        cur_x += (glyph->advance >> 6);
+		}
+
+		float off_x = (cur_x - x) * anchor_x;
+		float off_y = font->size * anchor_y;
+		for(i32 i = 0; i < len; i++) {
+			x_placements[i] -= off_x;
+			y_placements[i] -= off_y;
+		}
+	}
+
+	void text_line(
+		Context* context, 
+		const char* string, 
+		float x, float y, 
+		float anchor_x, float anchor_y, 
+		float r, float g, float b, float a, 
+		FontFace face)
+	{
+		State* state = &context->current_state;
+
+		i32 len = strlen(string);
+		float x_placements[len];
+		float y_placements[len];
+		text_line_placements(context, string, x_placements, y_placements, x, y, anchor_x, anchor_y, face);
+		
+		for(i32 i = 0; i < len; i++) {
+			char c = string[i];
+			FontGlyph* glyph = &context->fonts[face].glyphs[c];
+			Render::character(context, c, x_placements[i], y_placements[i], r, g, b, a, face);
 		}
 	}
 }
